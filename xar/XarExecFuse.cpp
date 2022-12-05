@@ -223,6 +223,12 @@ void usage() {
 
 } // namespace
 
+inline bool ends_with(std::string const & value, std::string const & ending)
+{
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
 int main(int argc, char** argv) {
   XAR_CHECK_SIMPLE(getuid() == geteuid());
   // Set our umask to a good default for the files we create.  Save
@@ -512,22 +518,39 @@ int main(int argc, char** argv) {
   // newArgs[4], newArgs[5], ... = args passed on our command line
 
   // Why argc + 5?  The 4 new params and the trailing nullptr entry.
-  char* newArgs[argc + 5];
-  newArgs[0] = strdup("/bin/sh");
-  newArgs[1] = strdup("-e");
-  newArgs[2] = strdup(exec_path.c_str());
-  if (!newArgs[0] || !newArgs[1] || !newArgs[2]) {
+
+  // char* newArgs[argc + 5];
+  // newArgs[0] = strdup("/bin/sh");
+  // newArgs[1] = strdup("-e");
+  // newArgs[2] = strdup(exec_path.c_str());
+  // if (!newArgs[0] || !newArgs[1] || !newArgs[2]) {
+  //   XAR_FATAL << "strdup failed, call the cops"
+  //             << ": " << strerror(errno);
+  // }
+  // newArgs[3] = xar_path;
+  // for (int i = 0; i < argc; ++i) {
+  //   newArgs[i + 4] = argv[i];
+  // }
+  // newArgs[argc + 4] = nullptr;
+  // outNewArgs = newArgs;
+
+
+  // New implementation where we execute without shell fork
+  // We directly run the binary (in this case Python).
+  char* newArgs[argc + 2];
+  newArgs[0] = strdup(exec_path.c_str());
+  if (!newArgs[0]) {
     XAR_FATAL << "strdup failed, call the cops"
               << ": " << strerror(errno);
   }
-  newArgs[3] = xar_path;
   for (int i = 0; i < argc; ++i) {
-    newArgs[i + 4] = argv[i];
+    newArgs[i + 1] = argv[i];
   }
-  newArgs[argc + 4] = nullptr;
+  newArgs[argc + 1] = nullptr;
+
   for (int i = 0; newArgs[i]; ++i) {
     if (tools::xar::debugging) {
-      cerr << "  exec arg: " << newArgs[i] << endl;
+      cerr << "  exec arg: " << i << newArgs[i] << endl;
     }
   }
 
