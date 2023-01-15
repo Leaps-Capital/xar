@@ -141,6 +141,7 @@ def main(args=None):
         xar.add_directory(opts.raw)
         if opts.raw_executable is not None:
             xar.set_executable(opts.raw_executable)
+            xar.set_skip_sh(True)
     else:
         raise ValueError("Unexpected value")
 

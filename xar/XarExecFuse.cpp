@@ -292,6 +292,18 @@ int main(int argc, char** argv) {
   if (it != header.end()) {
     execpath = it->second;
   }
+  
+  std::string skipShValue;
+  auto it2 = header.find(tools::xar::kSkipSh);
+  if (it2 != header.end()) {
+    skipShValue = it2->second;
+  }
+  std::string expected_skip ("1");
+  bool skipSh = false;
+  if (expected_skip.compare(skipShValue) == 0) {
+    skipSh = true;
+  }
+
   if (!mount_only && execpath.empty()) {
     XAR_FATAL << "No XAREXEC_TARGET in XAR header of " << xar_path;
   }
@@ -510,44 +522,43 @@ int main(int argc, char** argv) {
     XAR_FATAL << "Unable to open " << exec_path << ": " << strerror(errno);
   }
 
-  // cmd line is:
-  // newArgs[0] = "/bin/sh"
-  // newArgs[1] = "-e"
-  // newArgs[2] = mounted path inside squash file to run
-  // newArgs[3] = path to the squash file itself
-  // newArgs[4], newArgs[5], ... = args passed on our command line
+  // xar_exec_fuse can invoke the xar file as an executable binary, or
+  // a script inside the package. They lead to different command line options.
+  //  - invoked as a script, the full command line is 
+  // 0            1       2               3         4         argc + 5	 
+  // "/bin/sh"		"-e"		"script path"		exec_path	args...		nullptr
 
-  // Why argc + 5?  The 4 new params and the trailing nullptr entry.
-
-  // char* newArgs[argc + 5];
-  // newArgs[0] = strdup("/bin/sh");
-  // newArgs[1] = strdup("-e");
-  // newArgs[2] = strdup(exec_path.c_str());
-  // if (!newArgs[0] || !newArgs[1] || !newArgs[2]) {
-  //   XAR_FATAL << "strdup failed, call the cops"
-  //             << ": " << strerror(errno);
-  // }
-  // newArgs[3] = xar_path;
-  // for (int i = 0; i < argc; ++i) {
-  //   newArgs[i + 4] = argv[i];
-  // }
-  // newArgs[argc + 4] = nullptr;
-  // outNewArgs = newArgs;
-
-
+  //  - invoked directly as executable, the command line is 
+  // 0            1       ...    argc + 2	 
+  // exec_path		argc...		     nullptr 
+  int argc_offset = 2;
+  if (!skipSh) {
+    argc_offset = 5;
+  }
+  int pos = 0;
   // New implementation where we execute without shell fork
   // We directly run the binary (in this case Python).
-  char* newArgs[argc + 2];
-  newArgs[0] = strdup(exec_path.c_str());
-  if (!newArgs[0]) {
+  char* newArgs[argc + argc_offset];
+  if (!skipSh) {
+   newArgs[pos++] = strdup("/bin/sh");
+   newArgs[pos++] = strdup("-e");
+   if (!newArgs[0] || !newArgs[1]) {
+     XAR_FATAL << "strdup failed, call the cops"
+               << ": " << strerror(errno);
+     }
+  }
+  newArgs[pos] = strdup(exec_path.c_str());
+  if (!newArgs[pos]) {
     XAR_FATAL << "strdup failed, call the cops"
               << ": " << strerror(errno);
   }
+  pos++;
   for (int i = 0; i < argc; ++i) {
-    newArgs[i + 1] = argv[i];
+    newArgs[i + pos] = argv[i];
   }
-  newArgs[argc + 1] = nullptr;
+  newArgs[argc + argc_offset - 1] = nullptr;
 
+  // For debugging
   for (int i = 0; newArgs[i]; ++i) {
     if (tools::xar::debugging) {
       cerr << "  exec arg: " << i << newArgs[i] << endl;

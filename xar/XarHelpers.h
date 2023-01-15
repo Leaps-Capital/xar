@@ -129,6 +129,7 @@ constexpr auto kVersion = "VERSION";
 constexpr auto kXarexecTarget = "XAREXEC_TARGET";
 constexpr auto kXarexecTrampolineNames = "XAREXEC_TRAMPOLINE_NAMES";
 constexpr auto kMountRoot = "MOUNT_ROOT";
+constexpr auto kSkipSh = "SKIP_SH";
 
 // Extract the UUID, OFFSET, XAREXEC_TARGET, and other parameters from
 // the XAR header.

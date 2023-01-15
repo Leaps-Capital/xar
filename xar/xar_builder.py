@@ -56,6 +56,9 @@ class XarBuilder(object):
         self._priorities = None
         self._partition = None
 
+        # If set, do not use /bin/sh to invoke the xar_exec (launching binary exec, for example)
+        self._skip_sh_launcher = False
+
         self._version = None
         self._sort_file = None
         self._partition_dest = {}
@@ -108,6 +111,9 @@ class XarBuilder(object):
         if len(shebang) > MAX_SHEBANG:
             raise self.InvalidShebangError("Shebang too long '%s'" % shebang)
         self._shebang = shebang
+
+    def set_skip_sh(self, skip_sh: bool):
+        self._skip_sh_launcher = skip_sh
 
     def set_executable(self, xar_filename):
         """
@@ -234,6 +240,11 @@ class XarBuilder(object):
             xar_header["MOUNT_ROOT"] = self._mount_root
         if self._executable is not None:
             xar_header["XAREXEC_TARGET"] = self._executable
+        if self._skip_sh_launcher:
+            xar_header["SKIP_SH"] = "1"
+        else:
+            xar_header["SKIP_SH"] = "0"
+        print(xar_header)
         return xar_header
 
     def build(self, filename, squashfs_options=None):
