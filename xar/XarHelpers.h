@@ -109,7 +109,7 @@ void no_mount_roots_help_message(std::ostream& out);
 
 namespace {
 // Set to true for verbose output when testing.
-constexpr bool debugging = true;
+constexpr bool debugging = false;
 } // namespace
 
 // squashfs magic is required to be at the start of a squashfs image
